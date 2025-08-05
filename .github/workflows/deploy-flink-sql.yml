@@ -1,0 +1,38 @@
+# .github/workflows/deploy-flink-sql.yml
+name: Deploy Flink SQL to Confluent Cloud
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'domains/**.sql'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        domain: [orders, products, customers, promotions, loyalty]
+
+    env:
+      CONFLUENT_API_KEY: ${{ secrets.CONFLUENT_API_KEY }}
+      CONFLUENT_API_SECRET: ${{ secrets.CONFLUENT_API_SECRET }}
+      ENV: dev
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Load environment config
+        run: |
+          source env/$ENV/config.env
+
+      - name: Deploy Flink SQL for ${{ matrix.domain }}
+        run: |
+          for sql in domains/${{ matrix.domain }}/*.sql; do
+            curl -u $CONFLUENT_API_KEY:$CONFLUENT_API_SECRET \
+              -X POST "$FLINK_API_URL/statements" \
+              -H "Content-Type: application/sql" \
+              --data-binary "@$sql"
+          done
