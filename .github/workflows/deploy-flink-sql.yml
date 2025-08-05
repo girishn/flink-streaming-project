@@ -13,26 +13,27 @@ jobs:
 
     strategy:
       matrix:
-        domain: [orders, products, customers, promotions, loyalty]
+        domain: [orders] # , products, customers, promotions, loyalty
 
     env:
       CONFLUENT_API_KEY: ${{ secrets.CONFLUENT_API_KEY }}
       CONFLUENT_API_SECRET: ${{ secrets.CONFLUENT_API_SECRET }}
+      ORG_ID: ${{ secrets.ORG_ID_DEV }}
+      ENV_ID: ${{ secrets.ENV_ID_DEV }}
       ENV: dev
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Load environment config
-        run: |
-          source env/$ENV/config.env
-
       - name: Deploy Flink SQL for ${{ matrix.domain }}
         run: |
+          echo "Deploying Flink SQL for domain: ${{ matrix.domain }}"
+          source env/$ENV/config.env
+          echo "$FLINK_API_URL/sql/v1/organizations/$ORG_ID/environments/$ENV_ID"
           for sql in domains/${{ matrix.domain }}/*.sql; do
             curl -u $CONFLUENT_API_KEY:$CONFLUENT_API_SECRET \
-              -X POST "$FLINK_API_URL/statements" \
+              -X POST "$FLINK_API_URL/sql/v1/organizations/${ORG_ID}/environments/${ENV_ID}/statements" \
               -H "Content-Type: application/sql" \
               --data-binary "@$sql"
           done
